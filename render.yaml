@@ -1,20 +1,22 @@
 services:
-  # The main web application
   - type: web
     name: postiz-app
     runtime: docker
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /
+    healthCheckPath: /health
     envVars:
       - key: APP_KEY
         generateValue: true
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
       - key: APP_URL
-        value: https://${RENDER_EXTERNAL_URL}
+        value: ${RENDER_EXTERNAL_URL}      # no extra https://
       - key: DB_CONNECTION
         value: pgsql
       - key: DATABASE_URL
-        fromService:
-          type: psql
+        fromDatabase:
           name: postiz-db
           property: internalConnectionString
       - key: REDIS_URL
@@ -28,49 +30,53 @@ services:
         value: redis
       - key: CACHE_DRIVER
         value: redis
+    # If you don't set CMD in Dockerfile, uncomment one of these:
+    # startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+    # OR use nginx+php-fpm in Dockerfile listening on $PORT
 
-  # The background worker for queues
   - type: worker
     name: postiz-queue
     runtime: docker
     dockerfilePath: ./Dockerfile
-    dockerCommand: php artisan queue:work --sleep=3 --tries=3
+    startCommand: php artisan queue:work --sleep=1 --tries=3 --timeout=120
     envVars:
       - key: APP_KEY
-        fromService:
-          type: web
-          name: postiz-app
-          envVarKey: APP_KEY
+        fromService: { type: web, name: postiz-app, envVarKey: APP_KEY }  # reuse same key
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
       - key: APP_URL
-        fromService:
-          type: web
-          name: postiz-app
-          envVarKey: APP_URL
+        value: ${RENDER_EXTERNAL_URL}
       - key: DB_CONNECTION
         value: pgsql
       - key: DATABASE_URL
-        fromService:
-          type: psql
-          name: postiz-db
-          property: internalConnectionString
+        fromDatabase: { name: postiz-db, property: internalConnectionString }
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: postiz-redis
-          property: internalConnectionString
+        fromService: { type: redis, name: postiz-redis, property: internalConnectionString }
       - key: QUEUE_CONNECTION
         value: redis
-      - key: SESSION_DRIVER
-        value: redis
-      - key: CACHE_DRIVER
-        value: redis
 
-  # The database
-  - type: psql
-    name: postiz-db
-    plan: free
+  - type: cron
+    name: postiz-scheduler
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    schedule: "* * * * *"   # every minute
+    startCommand: php artisan schedule:run
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: DATABASE_URL
+        fromDatabase: { name: postiz-db, property: internalConnectionString }
+      - key: REDIS_URL
+        fromService: { type: redis, name: postiz-redis, property: internalConnectionString }
 
-  # The redis cache
   - type: redis
     name: postiz-redis
+    plan: free
+
+databases:
+  - name: postiz-db
     plan: free
