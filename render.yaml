@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: postiz-app
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        value: https://${RENDER_EXTERNAL_URL}
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DATABASE_URL
+        fromService:
+          type: psql
+          name: postiz-db
+          property: internalConnectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: postiz-redis
+          property: internalConnectionString
+      - key: QUEUE_CONNECTION
+        value: redis
+      - key: SESSION_DRIVER
+        value: redis
+      - key: CACHE_DRIVER
+        value: redis
+
+  - type: psql
+    name: postiz-db
+    plan: free
+
+  - type: redis
+    name: postiz-redis
+    plan: free
