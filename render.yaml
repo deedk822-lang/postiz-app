@@ -1,4 +1,5 @@
 services:
+  # The main web application
   - type: web
     name: postiz-app
     runtime: docker
@@ -28,10 +29,48 @@ services:
       - key: CACHE_DRIVER
         value: redis
 
+  # The background worker for queues
+  - type: worker
+    name: postiz-queue
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: php artisan queue:work --sleep=3 --tries=3
+    envVars:
+      - key: APP_KEY
+        fromService:
+          type: web
+          name: postiz-app
+          envVarKey: APP_KEY
+      - key: APP_URL
+        fromService:
+          type: web
+          name: postiz-app
+          envVarKey: APP_URL
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DATABASE_URL
+        fromService:
+          type: psql
+          name: postiz-db
+          property: internalConnectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: postiz-redis
+          property: internalConnectionString
+      - key: QUEUE_CONNECTION
+        value: redis
+      - key: SESSION_DRIVER
+        value: redis
+      - key: CACHE_DRIVER
+        value: redis
+
+  # The database
   - type: psql
     name: postiz-db
     plan: free
 
+  # The redis cache
   - type: redis
     name: postiz-redis
     plan: free
