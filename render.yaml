@@ -13,7 +13,7 @@ services:
         value: pgsql
       - key: DATABASE_URL
         fromService:
-          type: postgres
+          type: psql
           name: postiz-db
           property: internalConnectionString
       - key: REDIS_URL
@@ -28,7 +28,7 @@ services:
       - key: CACHE_DRIVER
         value: redis
 
-  - type: postgres
+  - type: psql
     name: postiz-db
     plan: free
 
