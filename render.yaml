@@ -18,24 +18,27 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: postiz-db
-          property: connectionString      # ✅ changed
+          property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis
           name: postiz-redis
-          property: connectionString      # ✅ changed
+          property: connectionString
       - key: QUEUE_CONNECTION
         value: redis
       - key: SESSION_DRIVER
         value: redis
       - key: CACHE_DRIVER
         value: redis
+    # For Docker runtime, prefer CMD in Dockerfile.
+    # If you must override here, use dockerCommand (NOT startCommand), e.g.:
+    # dockerCommand: php artisan serve --host=0.0.0.0 --port=$PORT
 
   - type: worker
     name: postiz-queue
     runtime: docker
     dockerfilePath: ./Dockerfile
-    startCommand: php artisan queue:work --sleep=1 --tries=3 --timeout=120
+    dockerCommand: php artisan queue:work --sleep=1 --tries=3 --timeout=120   # ✅ use dockerCommand
     envVars:
       - key: APP_KEY
         fromService:
@@ -53,12 +56,12 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: postiz-db
-          property: connectionString      # ✅ changed
+          property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis
           name: postiz-redis
-          property: connectionString      # ✅ changed
+          property: connectionString
       - key: QUEUE_CONNECTION
         value: redis
 
@@ -67,7 +70,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     schedule: "* * * * *"
-    startCommand: php artisan schedule:run
+    dockerCommand: php artisan schedule:run                                  # ✅ use dockerCommand
     envVars:
       - key: APP_ENV
         value: production
@@ -76,16 +79,17 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: postiz-db
-          property: connectionString      # ✅ changed
+          property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis
           name: postiz-redis
-          property: connectionString      # ✅ changed
+          property: connectionString
 
   - type: redis
     name: postiz-redis
     plan: free
+    ipAllowList: []   # ✅ required: deny public access; internal services still connect
 
 databases:
   - name: postiz-db
