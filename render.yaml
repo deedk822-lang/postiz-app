@@ -12,27 +12,24 @@ services:
       - key: APP_DEBUG
         value: false
       - key: APP_URL
-        value: ${RENDER_EXTERNAL_URL}      # no extra https://
+        value: ${RENDER_EXTERNAL_URL}
       - key: DB_CONNECTION
         value: pgsql
       - key: DATABASE_URL
         fromDatabase:
           name: postiz-db
-          property: internalConnectionString
+          property: connectionString      # ✅ changed
       - key: REDIS_URL
         fromService:
           type: redis
           name: postiz-redis
-          property: internalConnectionString
+          property: connectionString      # ✅ changed
       - key: QUEUE_CONNECTION
         value: redis
       - key: SESSION_DRIVER
         value: redis
       - key: CACHE_DRIVER
         value: redis
-    # If you don't set CMD in Dockerfile, uncomment one of these:
-    # startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
-    # OR use nginx+php-fpm in Dockerfile listening on $PORT
 
   - type: worker
     name: postiz-queue
@@ -41,7 +38,10 @@ services:
     startCommand: php artisan queue:work --sleep=1 --tries=3 --timeout=120
     envVars:
       - key: APP_KEY
-        fromService: { type: web, name: postiz-app, envVarKey: APP_KEY }  # reuse same key
+        fromService:
+          type: web
+          name: postiz-app
+          envVarKey: APP_KEY
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
@@ -51,9 +51,14 @@ services:
       - key: DB_CONNECTION
         value: pgsql
       - key: DATABASE_URL
-        fromDatabase: { name: postiz-db, property: internalConnectionString }
+        fromDatabase:
+          name: postiz-db
+          property: connectionString      # ✅ changed
       - key: REDIS_URL
-        fromService: { type: redis, name: postiz-redis, property: internalConnectionString }
+        fromService:
+          type: redis
+          name: postiz-redis
+          property: connectionString      # ✅ changed
       - key: QUEUE_CONNECTION
         value: redis
 
@@ -61,7 +66,7 @@ services:
     name: postiz-scheduler
     runtime: docker
     dockerfilePath: ./Dockerfile
-    schedule: "* * * * *"   # every minute
+    schedule: "* * * * *"
     startCommand: php artisan schedule:run
     envVars:
       - key: APP_ENV
@@ -69,9 +74,14 @@ services:
       - key: APP_DEBUG
         value: false
       - key: DATABASE_URL
-        fromDatabase: { name: postiz-db, property: internalConnectionString }
+        fromDatabase:
+          name: postiz-db
+          property: connectionString      # ✅ changed
       - key: REDIS_URL
-        fromService: { type: redis, name: postiz-redis, property: internalConnectionString }
+        fromService:
+          type: redis
+          name: postiz-redis
+          property: connectionString      # ✅ changed
 
   - type: redis
     name: postiz-redis
